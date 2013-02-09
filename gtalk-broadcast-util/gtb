@@ -1,0 +1,71 @@
+#!/usr/bin/python
+# Copyright (c) 2013, Andrey Khobnya
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+import sys
+import time
+import xmpp
+
+def process(args):
+    if len(args) < 5:
+        print_help()
+        return
+    gtalk_client = open_session(args[1], args[2])
+    if args[3] == "send":
+        message = args[4]
+        receivers = args[5:]
+        for username in receivers:
+            send_message(gtalk_client, username, message)
+            print('Message has been sent to "%s"' % username)
+            time.sleep(1)
+    elif args[3] == "invite":
+        receivers = args[4:]
+        for username in receivers:
+            invite_user(gtalk_client, username)
+            print('Invitation has been sent to "%s"' % username)
+            time.sleep(1)
+    else:
+        print_help()
+    close_session(gtalk_client)
+    
+def print_help():
+    print("""Usage: gtb <login> <password> <command> [<message>] [<receivers>]
+    
+Commands:
+    send - sending chat message to all receivers
+    invite - sending invitation to all receivers
+        
+Example: gtb somebot somepassword send "Hi all!!!" username1 username2
+Receivers should be entered without @gmail.com
+""")
+
+def open_session(login, password):
+    gtalk_client = xmpp.Client('gmail.com', debug=None)
+    gtalk_client.connect(server=('talk.google.com',5222))
+    gtalk_client.auth(login, password, 'botty')
+    return gtalk_client
+
+def close_session(gtalk_client):
+    try:
+        gtalk_client.disconnect()
+    except IOError:
+        pass # do nothing 
+
+def send_message(gtalk_client, username, message):
+    gtalk_client.send(xmpp.Message(username + '@gmail.com', message))
+
+def invite_user(gtalk_client, username):
+    gtalk_client.send(xmpp.Presence(to=username + '@gmail.com', typ='subscribe'))
+    
+process(sys.argv)
